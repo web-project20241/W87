@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Attendance</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .attendance-container {
+            margin-top: 50px;
+        }
+        .attendance-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .attendance-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container attendance-container">
+        <h1 class="text-center mb-4">Mark Attendance</h1>
+        <div id="sessionDetails" class="mb-4">
+            <!-- Session details will be loaded here -->
+        </div>
+        <div id="traineeList" class="list-group">
+            <!-- Trainee items will be loaded here -->
+        </div>
+        <div class="text-center mt-4">
+            <button id="saveAttendance" class="btn btn-success">Save Attendance</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            var sessionId = new URLSearchParams(window.location.search).get('session_id');
+
+            function loadSessionDetails() {
+                return $.ajax({
+                    type: 'GET',
+                    url: 'mark_attendance_scripts/load_session_details.php',
+                    data: {session_id: sessionId},
+                    dataType: 'json'
+                });
+            }
+
+            function loadTrainees() {
+                return $.ajax({
+                    type: 'GET',
+                    url: 'mark_attendance_scripts/load_session_trainees.php',
+                    data: {session_id: sessionId},
+                    dataType: 'json'
+                });
+            }
+
+            function renderSessionDetails(session) {
+                $('#sessionDetails').html(`<h5>Session Date: ${session.date}</h5>
+                                           <h5>Session Time: ${session.hour}</h5>
+                                           <h5>Trainer: ${session.trainer_name}</h5>`);
+            }
+
+            function renderTrainees(trainees) {
+                var traineeItems = trainees.map(trainee => {
+                    // Assuming 'attendance' is true or '1' if the trainee attended
+                    var isChecked = trainee.attendance === true || trainee.attendance === '1';
+                    return `<div class="list-group-item attendance-item">
+                                <span>${trainee.name} ${trainee.last_name}</span>
+                                <input type="checkbox" class="form-check-input" data-trainee-id="${trainee.id}" ${isChecked ? 'checked' : ''}>
+                            </div>`;
+                }).join('');
+                $('#traineeList').html(traineeItems);
+            }
+            
+            function saveAttendance() {
+                var attendance = [];
+                $('#traineeList input[type="checkbox"]').each(function() {
+                    attendance.push({
+                        trainee_id: $(this).data('trainee-id'),
+                        attended: $(this).is(':checked')
+                    });
+                });
+
+                $.ajax({
+                    type: 'POST',
+                    url: 'mark_attendance_scripts/save_attendance.php',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        session_id: sessionId,
+                        attendance: attendance
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Attendance saved successfully.');
+                            window.location.href = 'weekly_sessions.html';
+                        } else {
+                            alert('Error saving attendance: ' + response.error);
+                        }
+                    },
+                    error: function() {
+                        alert('Error saving attendance.');
+                    }
+                });
+            }
+
+            function initialize() {
+                $.when(loadSessionDetails(), loadTrainees()).done(function(sessionResp, traineesResp) {
+                    renderSessionDetails(sessionResp[0]);
+                    renderTrainees(traineesResp[0]);
+                });
+
+                $('#saveAttendance').click(function() {
+                    saveAttendance();
+                });
+            }
+
+            initialize();
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

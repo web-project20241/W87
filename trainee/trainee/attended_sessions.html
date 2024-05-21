@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Metadata about the document -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attended Training Sessions</title>
+    
+    <!-- Bootstrap CSS for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CSS for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <!-- jQuery library -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Custom CSS for additional styling -->
+    <style>
+        .session-item {
+            background-color: #f8f9fa;  /* Light grey background color for session items */
+            border: 1px solid #dee2e6;  /* Light grey border for session items */
+            border-radius: .25rem;  /* Rounded corners for session items */
+            padding: .5rem;  /* Padding inside session items */
+            margin-bottom: .75rem;  /* Margin below each session item */
+        }
+        .no-sessions-message {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #6c757d;  /* Grey color for the no sessions message */
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Page header -->
+        <h1 class="mt-5 mb-4 text-center">Attended Training Sessions</h1>
+        <div id="sessionList" class="list-group">
+            <!-- Session items will be loaded here dynamically -->
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Function to load attended sessions from the server
+            function loadAttendedSessions() {
+                return $.ajax({
+                    type: 'GET',
+                    url: 'load_attended_sessions.php',
+                    dataType: 'json'
+                });
+            }
+
+            // Function to submit feedback for a specific session
+            function submitFeedback(sessionId, feedbackText) {
+                return $.ajax({
+                    type: 'POST',
+                    url: 'submit_feedback.php',
+                    data: {
+                        sessionId: sessionId,
+                        feedbackText: feedbackText
+                    },
+                    dataType: 'json'
+                });
+            }
+
+            // Function to render session items on the page
+            function renderSessions(sessions) {
+                if (sessions.length === 0) {
+                    $('#sessionList').html('<div class="no-sessions-message">No attended training sessions available.</div>');
+                    return;
+                }
+
+                var sessionItems = sessions.map(session => {
+                    return `<div class="list-group-item session-item">
+                                <h5>${session.trainer_name}</h5>
+                                <p>Date: ${session.date}</p>
+                                <p>Time: ${session.hour}</p>
+                                <form class="feedback-form" data-sessionid="${session.id}">
+                                    <div class="mb-3">
+                                        <textarea class="form-control feedback-text" placeholder="Write your feedback here..." rows="3"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                                </form>
+                            </div>`;
+                }).join('');
+                $('#sessionList').html(sessionItems);
+            }
+
+            // Initialize the page by loading sessions and setting up event handlers
+            function initialize() {
+                loadAttendedSessions().done(function(sessions) {
+                    renderSessions(sessions);
+                });
+
+                $('#sessionList').on('submit', '.feedback-form', function(e) {
+                    e.preventDefault();  // Prevent default form submission
+                    var form = $(this);
+                    var sessionId = form.data('sessionid');
+                    var feedbackText = form.find('.feedback-text').val();
+
+                    submitFeedback(sessionId, feedbackText).done(function(response) {
+                        if (response.success) {
+                            alert('Feedback submitted successfully!');
+                            form.find('.feedback-text').val('');  // Clear the feedback text area
+                        } else {
+                            alert('Failed to submit feedback: ' + response.error);
+                        }
+                    }).fail(function() {
+                        alert('Error submitting feedback.');
+                    });
+                });
+            }
+
+            // Call the initialize function to set up the page
+            initialize();
+        });
+    </script>
+
+    <!-- Bootstrap JS for additional functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

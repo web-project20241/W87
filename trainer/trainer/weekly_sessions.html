@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Metadata about the document -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Training Sessions</title>
+
+    <!-- Bootstrap CSS for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CSS for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+    <!-- Custom CSS for additional styling -->
+    <style>
+        body {
+            background: url('../img.jpg') no-repeat center center fixed; /* Replace with your image URL */
+            background-size: cover;
+            z-index: -1;
+            color: #fff; /* Ensure text is readable */
+        }
+        .table {
+            background-color: rgba(0, 0, 0, 0.5); /* Translucent black background for the table */
+        }
+        .table th {
+            text-align: center;
+            vertical-align: middle;
+            background-color: rgba(52, 58, 64, 0.8); /* Darker translucent background for table header */
+            color: #fff; /* Ensure table header text is readable */
+        }
+        .table td {
+            vertical-align: middle;
+            text-align: center;
+            color: #fff; /* Ensure table text is readable */
+        }
+        .session-slot {
+            background-color: rgba(0, 0, 0, 0.7); /* Dark background for session slots with transparency */
+            border-radius: 5px; /* Rounded corners */
+            padding: 10px; /* Padding inside session slots */
+            margin-bottom: 5px; /* Margin below each session slot */
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .session-slot:hover {
+            background-color: rgba(0, 0, 0, 0.85); /* Darker on hover */
+        }
+        .session-name {
+            font-weight: bold; /* Bold font for session names */
+        }
+        .session-trainer {
+            color: #d7d9db; /* Light grey color for trainer names */
+        }
+        .delete-button, .attendance-button {
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .delete-button {
+            color: red; /* Red color for delete button */
+        }
+        .attendance-button {
+            color: green; /* Green color for attendance button */
+        }
+        #noSessionsMessage {
+            color: #ffffff; /* Ensure the message text is readable */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Page header -->
+        <h1 class="mt-5 mb-4 text-center">Weekly Training Sessions</h1>
+        <div class="mb-4 text-end">
+            <a href="trainer_feedback.html" class="btn btn-primary">Feedback</a>
+        </div>
+        <div class="mb-4 text-end">
+            <a href="create_training_session.html" class="btn btn-primary">Create New Session</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Time/Date</th>
+                        <th id="sunday">Sunday</th>
+                        <th id="monday">Monday</th>
+                        <th id="tuesday">Tuesday</th>
+                        <th id="wednesday">Wednesday</th>
+                        <th id="thursday">Thursday</th>
+                        <th id="friday">Friday</th>
+                        <th id="saturday">Saturday</th>
+                    </tr>
+                </thead>
+                <tbody id="sessionSlots">
+                    <!-- Sessions will be populated here via JavaScript -->
+                </tbody>
+            </table>
+            <div id="noSessionsMessage" class="text-center text-muted" style="display: none;">No sessions available for this week.</div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS for additional functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery library -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Function to get the dates for the current week
+            function getWeekDates() {
+                var now = new Date();
+                var dayOfWeek = now.getDay();
+                var days = [];
+                now.setDate(now.getDate() - dayOfWeek);
+                for (var i = 0; i < 7; i++) {
+                    var day = new Date(now);
+                    day.setDate(day.getDate() + i);
+                    days.push(day);
+                }
+                return days;
+            }
+
+            // Function to format the date as MM/DD
+            function formatDate(date) {
+                return (date.getMonth() + 1) + '/' + date.getDate();
+            }
+
+            // Function to load weekly sessions from the server
+            function loadWeeklySessions() {
+                var weekDates = getWeekDates();
+                weekDates.forEach(function(date, index) {
+                    var formattedDate = formatDate(date);
+                    var dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][index];
+                    $('#' + dayName).text(dayName.charAt(0).toUpperCase() + dayName.slice(1) + ' (' + formattedDate + ')');
+                });
+
+                $.ajax({
+                    type: 'GET',
+                    url: 'weekly_sessions_scripts/load_weekly_sessions.php',
+                    dataType: 'json',
+                    success: function(schedule) {
+                        var tableRows = '';
+                        var timeSlots = Object.keys(schedule).sort();
+                        var daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+                        var sessionsExist = false;
+
+                        timeSlots.forEach(function(timeSlot) {
+                            var row = '<tr>';
+                            row += '<td>' + timeSlot + '</td>';
+                            daysOfWeek.forEach(function(day) {
+                                var sessionsInSlot = schedule[timeSlot] && schedule[timeSlot][day] ? schedule[timeSlot][day] : [];
+                                var cellContent = '';
+                                sessionsInSlot.forEach(function(session) {
+                                    sessionsExist = true;
+                                    cellContent += '<div class="session-slot" data-session-id="' + session.id + '">';
+                                    cellContent += '<span class="attendance-button"><i class="fas fa-user-check"></i></span>';
+                                    cellContent += '<div>';
+                                    cellContent += '<div class="session-name">' + session.name + '</div>';
+                                    cellContent += '<div class="session-trainer">Trainer: ' + session.trainer_name + '</div>';
+                                    cellContent += '</div>';
+                                    cellContent += '<span class="delete-button">&times;</span>';
+                                    cellContent += '</div>';
+                                });
+                                row += '<td>' + (cellContent || 'No session') + '</td>';
+                            });
+                            row += '</tr>';
+                            tableRows += row;
+                        });
+
+                        $('#sessionSlots').html(tableRows);
+
+                        if (!sessionsExist) {
+                            $('#noSessionsMessage').show();
+                        } else {
+                            $('#noSessionsMessage').hide();
+                        }
+                    },
+                    error: function() {
+                        alert('Error loading sessions.');
+                    }
+                });
+            }
+
+            // Event handler for deleting a session
+            $(document).on('click', '.delete-button', function() {
+                var sessionId = $(this).closest('.session-slot').data('session-id');
+                if (confirm('Are you sure you want to delete this session?')) {
+                    $.ajax({
+                        type: 'POST',
+                        url: 'weekly_sessions_scripts/delete_session.php',
+                        data: {session_id: sessionId},
+                        success: function(response) {
+                            if (response === 'success') {
+                                alert('Session deleted successfully.');
+                                loadWeeklySessions();
+                            } else {
+                                alert('Error deleting session: ' + response);
+                            }
+                        },
+                        error: function() {
+                            alert('Error deleting session.');
+                        }
+                    });
+                }
+            });
+
+            // Event handler for marking attendance
+            $(document).on('click', '.attendance-button', function() {
+                var sessionId = $(this).closest('.session-slot').data('session-id');
+                window.location.href = 'mark_attendance.html?session_id=' + sessionId;
+            });
+
+            // Load the weekly sessions when the page loads
+            loadWeeklySessions();
+        });
+    </script>
+</body>
+</html>

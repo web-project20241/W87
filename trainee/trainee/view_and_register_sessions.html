@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Metadata about the document -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register for Training Session</title>
+
+    <!-- Bootstrap CSS for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CSS for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+    <!-- Custom CSS for additional styling -->
+    <style>
+        body {
+            background: url('../img3.jpg') no-repeat center center fixed; /* Replace with your image URL */
+            background-size: cover;
+            z-index: -1;
+            color: #000; /* Change text color to black for better contrast */
+        }
+        .register-btn {
+            display: inline-flex;
+            align-items: center;
+        }
+        .register-btn .icon {
+            margin-right: .5rem;
+        }
+        .table thead th {
+            text-align: center;
+            vertical-align: middle;
+            background-color: rgba(255, 255, 255, 0.8); /* Light background for table header */
+            color: #000; /* Dark text for readability */
+        }
+        .table tbody td {
+            text-align: center;
+            vertical-align: middle;
+            background-color: rgba(255, 255, 255, 0.8); /* Light background for table cells */
+            color: #000; /* Dark text for readability */
+        }
+        .session-item {
+            background-color: rgba(255, 255, 255, 0.9);  /* Light grey background color for session items */
+            border: 1px solid #dee2e6;  /* Light grey border for session items */
+            border-radius: .25rem;  /* Rounded corners for session items */
+            padding: .5rem;  /* Padding inside session items */
+            margin-bottom: .75rem;  /* Margin below each session item */
+            display: inline-block;
+            color: #000; /* Dark text for readability */
+        }
+        .registered-icon {
+            color: #28a745;  /* Green color for registered icon */
+            font-size: 1.5rem;
+        }
+        .btn-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .btn-feedback, .btn-view-feedbacks {
+            border-radius: .5rem;
+            padding: .75rem 1.5rem;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            color: #fff; /* Ensure button text is readable */
+        }
+        .btn-feedback {
+            background-color: #007bff;
+        }
+        .btn-feedback:hover {
+            background-color: #0056b3;
+        }
+        .btn-view-feedbacks {
+            background-color: #6c757d;
+        }
+        .btn-view-feedbacks:hover {
+            background-color: #5a6268;
+        }
+    </style>
+
+    <!-- jQuery library -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Page header -->
+        <h1 class="mt-5 mb-4 text-center">Register for a Training Session</h1>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Sunday</th>
+                        <th>Monday</th>
+                        <th>Tuesday</th>
+                        <th>Wednesday</th>
+                        <th>Thursday</th>
+                        <th>Friday</th>
+                        <th>Saturday</th>
+                    </tr>
+                    <tr id="dateRow">
+                        <!-- Date headers will be filled dynamically -->
+                        <th></th>
+                        <th id="dateSunday"></th>
+                        <th id="dateMonday"></th>
+                        <th id="dateTuesday"></th>
+                        <th id="dateWednesday"></th>
+                        <th id="dateThursday"></th>
+                        <th id="dateFriday"></th>
+                        <th id="dateSaturday"></th>
+                    </tr>
+                </thead>
+                <tbody id="sessionTable">
+                    <!-- Session items will be loaded here dynamically -->
+                </tbody>
+            </table>
+        </div>
+        <div class="btn-container">
+            <!-- Navigation buttons -->
+            <button class="btn btn-feedback" onclick="window.location.href='attended_sessions.html'">Add Feedback</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Function to load available sessions from the server
+            function loadSessions() {
+                return $.ajax({
+                    type: 'GET',
+                    url: 'load_available_sessions.php',
+                    dataType: 'json'
+                });
+            }
+        
+            // Function to load registered sessions from the server
+            function loadRegisteredSessions() {
+                return $.ajax({
+                    type: 'GET',
+                    url: 'load_registered_sessions.php',
+                    dataType: 'json'
+                });
+            }
+        
+            // Function to render sessions in the table
+            function renderSessions(availableSessions, registeredSessions) {
+                var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                var registeredIds = registeredSessions.map(session => session.id);  // Get ids of registered sessions
+
+                // Calculate dates for the current week
+                var today = new Date();
+                var firstDayOfWeek = today.getDate() - today.getDay();  // Get the first day of the week (Sunday)
+                var dates = days.map((day, index) => {
+                    var date = new Date(today.setDate(firstDayOfWeek + index));
+                    return date.toLocaleDateString();
+                });
+
+                // Update the date row
+                dates.forEach((date, index) => {
+                    $(`#date${days[index]}`).text(date);
+                });
+                
+                // Create a time slots array based on the available sessions
+                var timeSlots = [...new Set(availableSessions.map(session => session.hour))].sort();
+                
+                var rows = timeSlots.map(hour => {
+                    var cols = days.map((day, index) => {
+                        var sessions = availableSessions.filter(session => new Date(session.date).getDay() === index && session.hour === hour);
+                        if (sessions.length > 0) {
+                            return sessions.map(session => {
+                                let content = registeredIds.includes(session.id) ? 
+                                    `<div class="session-item">${session.trainer_name}<br><i class="fas fa-check-circle registered-icon"></i></div>` : 
+                                    `<div class="session-item">${session.trainer_name}<br><button class="btn btn-primary register-btn" data-sessionid="${session.id}"><span class="icon">&#x1F4DD;</span> Register</button></div>`;
+                                return content;
+                            }).join('');
+                        } else {
+                            return '';
+                        }
+                    });
+                    return `<tr>
+                                <td>${hour}</td>
+                                ${cols.map(col => `<td>${col}</td>`).join('')}
+                            </tr>`;
+                }).join('');
+                $('#sessionTable').html(rows);
+            }
+        
+            // Function to register for a session
+            function registerForSession(sessionId) {
+                $.ajax({
+                    type: 'POST',
+                    url: 'register_session.php',
+                    data: { sessionId: sessionId },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.success);
+                        } else if (response.error) {
+                            alert(response.error);
+                        } else {
+                            alert('Unexpected response from server.');
+                        }
+                        initialize();  // Reload everything
+                    },
+                    error: function() {
+                        alert('Error registering for session.');
+                    }
+                });
+            }
+        
+            // Initialize the page by loading sessions and setting up event handlers
+            function initialize() {
+                $.when(loadSessions(), loadRegisteredSessions()).done(function(availableResp, registeredResp) {
+                    renderSessions(availableResp[0], registeredResp[0]);
+                });
+            }
+        
+            // Event handler for registering a session
+            $('#sessionTable').on('click', '.register-btn', function() {
+                var sessionId = $(this).data('sessionid');
+                registerForSession(sessionId);
+            });
+        
+            // Call the initialize function to set up the page
+            initialize();
+        });
+    </script>
+
+    <!-- Bootstrap JS for additional functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
