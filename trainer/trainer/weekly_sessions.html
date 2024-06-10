@@ -152,7 +152,7 @@
                                 var cellContent = '';
                                 sessionsInSlot.forEach(function(session) {
                                     sessionsExist = true;
-                                    cellContent += '<div class="session-slot" data-session-id="' + session.id + '">';
+                                    cellContent += '<div class="session-slot" data-session-id="' + session.id + '" data-session-time="' + session.start_time + '">';
                                     cellContent += '<span class="attendance-button"><i class="fas fa-user-check"></i></span>';
                                     cellContent += '<div>';
                                     cellContent += '<div class="session-name">' + session.name + '</div>';
@@ -184,6 +184,15 @@
             // Event handler for deleting a session
             $(document).on('click', '.delete-button', function() {
                 var sessionId = $(this).closest('.session-slot').data('session-id');
+                var sessionTime = new Date($(this).closest('.session-slot').data('session-time'));
+                var currentTime = new Date();
+                var timeDifference = (sessionTime - currentTime) / (1000 * 60 * 60); // Difference in hours
+
+                if (timeDifference < 3) {
+                    alert('You cannot delete a session less than 3 hours before it starts.');
+                    return;
+                }
+
                 if (confirm('Are you sure you want to delete this session?')) {
                     $.ajax({
                         type: 'POST',

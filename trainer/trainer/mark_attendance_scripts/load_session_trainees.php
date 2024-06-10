@@ -3,9 +3,9 @@ session_start();
 header('Content-Type: application/json');
 
 $host = 'localhost';
-$dbname = 'traioxys_trainingdb';
-$user = 'traioxys_safwan';
-$pass = 'tS-mz5H#-pZF';
+$dbname = 'traiyqgl_trainingdb';
+$user = 'traiyqgl_liel';
+$pass = 'Alufim123!!!!!';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
